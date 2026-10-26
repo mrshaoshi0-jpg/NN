@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Photos">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+  <meta name="description" content="Offline Photos Album with Pattern Lock">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <title>Photos / 相册</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Pattern Lock Overlay -->
+  <div id="lock-screen" class="screen">
+    <div class="lock-content">
+      <div class="lock-icon">🔒</div>
+      <h1 id="lock-title">Enter Pattern</h1>
+      <p id="lock-hint" class="hint">请在下方九个点上滑动绘制图案</p>
+      <div id="pattern-container"></div>
+      <p style="margin-top:24px;font-size:13px;color:var(--text-secondary);text-align:center;">忘记密码？可点击下方重置</p>
+      <button id="lock-reset" class="text-btn" style="margin-top:8px;">重新设置密码 / Reset</button>
+    </div>
+  </div>
+
+  <!-- Setup Pattern (first time) -->
+  <div id="setup-screen" class="screen hidden">
+    <div class="lock-content">
+      <div class="lock-icon">🔐</div>
+      <h1 id="setup-title">Set Pattern Lock</h1>
+      <p id="setup-hint" class="hint">Draw an unlock pattern</p>
+      <div id="setup-pattern-container"></div>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="app" class="screen hidden">
+    <!-- Header -->
+    <header id="header">
+      <div class="header-left">
+        <button id="btn-back" class="icon-btn hidden" aria-label="Back">‹</button>
+        <h1 id="header-title">Albums</h1>
+      </div>
+      <div class="header-right">
+        <button id="btn-select" class="text-btn">Select</button>
+        <button id="btn-lang" class="icon-btn" title="Language">中/EN</button>
+        <button id="btn-more" class="icon-btn">•••</button>
+      </div>
+    </header>
+
+    <!-- Albums View -->
+    <main id="albums-view" class="view">
+      <div class="albums-grid" id="albums-grid">
+        <!-- Dynamic albums -->
+      </div>
+      <button id="btn-new-album" class="fab" aria-label="New Album">+</button>
+    </main>
+
+    <!-- Media Grid View -->
+    <main id="media-view" class="view hidden">
+      <div class="media-grid" id="media-grid">
+        <!-- Dynamic media -->
+      </div>
+      <div id="empty-state" class="empty-state hidden">
+        <div class="empty-icon">📷</div>
+        <p id="empty-text">No Photos or Videos</p>
+        <button id="btn-import-empty" class="primary-btn">Import</button>
+      </div>
+    </main>
+
+    <!-- Selection Bar -->
+    <div id="selection-bar" class="bottom-bar hidden">
+      <button id="btn-delete" class="danger-btn">Delete</button>
+      <button id="btn-move" class="secondary-btn">Move</button>
+      <span id="selection-count">0 selected</span>
+    </div>
+
+    <!-- Bottom Nav / Actions -->
+    <nav id="bottom-nav">
+      <button id="btn-import" class="nav-btn">
+        <span class="nav-icon">＋</span>
+        <span class="nav-label">Import</span>
+      </button>
+      <button id="btn-albums" class="nav-btn active">
+        <span class="nav-icon">📁</span>
+        <span class="nav-label">Albums</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Viewer Modal -->
+  <div id="viewer" class="modal hidden">
+    <div class="viewer-header">
+      <button id="viewer-close" class="icon-btn">✕</button>
+      <span id="viewer-counter"></span>
+      <button id="viewer-crop" class="text-btn">Crop</button>
+    </div>
+    <div id="viewer-content">
+      <img id="viewer-image" class="hidden" alt="">
+      <video id="viewer-video" class="hidden" controls playsinline></video>
+    </div>
+    <div class="viewer-footer">
+      <button id="viewer-prev" class="icon-btn">‹</button>
+      <button id="viewer-next" class="icon-btn">›</button>
+    </div>
+  </div>
+
+  <!-- Crop Modal -->
+  <div id="crop-modal" class="modal hidden">
+    <div class="crop-header">
+      <button id="crop-cancel" class="text-btn">Cancel</button>
+      <span>Crop</span>
+      <button id="crop-done" class="text-btn primary">Done</button>
+    </div>
+    <div id="crop-area">
+      <canvas id="crop-canvas"></canvas>
+      <div id="crop-box"></div>
+    </div>
+  </div>
+
+  <!-- New Album Modal -->
+  <div id="new-album-modal" class="modal hidden">
+    <div class="sheet">
+      <h2 id="new-album-title">New Album</h2>
+      <input type="text" id="new-album-name" placeholder="Album Name" maxlength="50">
+      <div class="sheet-actions">
+        <button id="new-album-cancel" class="secondary-btn">Cancel</button>
+        <button id="new-album-create" class="primary-btn">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Move to Album Modal -->
+  <div id="move-modal" class="modal hidden">
+    <div class="sheet">
+      <h2 id="move-title">Move to Album</h2>
+      <div id="move-album-list"></div>
+      <button id="move-cancel" class="secondary-btn full">Cancel</button>
+    </div>
+  </div>
+
+  <!-- More Menu -->
+  <div id="more-menu" class="popover hidden">
+    <button id="menu-export" class="menu-item">Export Selected</button>
+    <button id="menu-change-pass" class="menu-item">Change Pattern</button>
+    <button id="menu-about" class="menu-item">About</button>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Hidden file input -->
+  <input type="file" id="file-input" accept="image/*,video/*" multiple hidden>
+
+  <script src="i18n.js"></script>
+  <script src="db.js"></script>
+  <script src="pattern.js"></script>
+  <script src="media.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(console.error);
+    }
+  </script>
+</body>
+</html>
